@@ -39,7 +39,7 @@ tuesdata$stressor%>%
 #plots<-list()
 
   
-  plots1<-tuesdata$stressor%>%
+plots1<-tuesdata$stressor%>%
   mutate(stress_pct=case_when(is.na(stress_pct)~0,
                               T~stress_pct))%>%
   pivot_wider(names_from=year,values_from=stress_pct)%>%
@@ -51,7 +51,10 @@ tuesdata$stressor%>%
          max=max(diffS))%>%
   split(.$stressor)%>%
   map(~plot_usmap(data=.x, values = "diffS", color = "white") + 
-  scale_fill_continuous_divergingx(name = "stress rating", label = scales::comma,limits=c(unique(.x$min),unique(.x$max)),mid=0,palette = "Spectral") + 
+  scale_fill_continuous_divergingx(name = "", 
+                                   limits=c(unique(.x$min),unique(.x$max)),mid=0,palette = "Spectral",
+                                   breaks=c(unique(.x$min),unique(.x$max)),
+                                   labels = c("More Stressors\nin 2015", "More Stressors\nin 2021")) + 
   #facet_wrap(stressor)+
   theme(legend.position = "bottom")+
   ggtitle(unique(.x$stressor))
@@ -60,14 +63,38 @@ tuesdata$stressor%>%
 ```
 
 ```{r}
-cowplot::plot_grid(plots1[[1]]+theme(legend.position = "none"), 
+Stressors<-cowplot::plot_grid(plots1[[1]]+theme(legend.position = "none"), 
                    plots1[[4]]+theme(legend.position = "none"),
                    plots1[[3]]+theme(legend.position = "none"),
                    plots1[[6]]+theme(legend.position = "none"),
                    plots1[[5]]+theme(legend.position = "none"),
-                   plots1[[2]]+theme(legend.position = "none"),get_legend(plots1[[2]]),
-                   rel_widths = c(1,1,1,1,1,1,0.3),
-                   rel_heights = c(1,1,0.2),nrow=3)
+                   plots1[[2]]+theme(legend.position = "none"),
+                   NULL,get_legend(plots1[[2]]),NULL,
+                   #rel_widths = c(1,1,1,1,1,1,0.3),
+                   rel_heights = c(1,1,0.3),nrow=3)
+```
+
+```{r}
+Ratio<-tuesdata$colony%>%
+  pivot_wider(names_from=year,values_from=colony_n)%>%
+  group_by(state)%>%
+  dplyr::summarize(M_Stress_pct2021=mean(`2021`,na.rm=T),
+                   M_Stress_pct2015=mean(`2015`,na.rm=T))%>%rowwise()%>%
+  mutate(diffS=M_Stress_pct2021/M_Stress_pct2015)%>%ungroup%>%
+  plot_usmap(data=., values = "diffS", color = "white") + 
+  scale_fill_continuous_divergingx(name = "", 
+                                   limits=c(0,2),mid=1,palette = "RdBu",
+                                   breaks=c(0,2),
+                                   labels = c("0: More Bees\nin 2015", "2: More Bees\nin 2021")) + 
+  #facet_wrap(stressor)+
+  theme(legend.position = "bottom",legend.justification = c(-1.5,0))+
+  ggtitle("Colony Size Ratio 2021/2015")
+  
+
 ```
 
 
+```{r fig.width=6,fig.height=2}
+RatioLegend<-plot_grid(Ratio+theme(legend.position="none"),get_legend(Ratio),ncol=2)
+plot_grid(Stressors,NULL,RatioLegend,rel_widths = c(1,0.1,1),nrow=1)
+```
